@@ -139,6 +139,7 @@ class appDevDebugProjectContainer extends Container
             'monolog.logger.scream' => 'getMonolog_Logger_ScreamService',
             'monolog.logger.security' => 'getMonolog_Logger_SecurityService',
             'monolog.logger.templating' => 'getMonolog_Logger_TemplatingService',
+            'pdo' => 'getPdoService',
             'profiler' => 'getProfilerService',
             'profiler_listener' => 'getProfilerListenerService',
             'property_accessor' => 'getPropertyAccessorService',
@@ -178,6 +179,7 @@ class appDevDebugProjectContainer extends Container
             'sensio_framework_extra.view.listener' => 'getSensioFrameworkExtra_View_ListenerService',
             'service_container' => 'getServiceContainerService',
             'session' => 'getSessionService',
+            'session.handler.pdo' => 'getSession_Handler_PdoService',
             'session.save_listener' => 'getSession_SaveListenerService',
             'session.storage.filesystem' => 'getSession_Storage_FilesystemService',
             'session.storage.metadata_bag' => 'getSession_Storage_MetadataBagService',
@@ -266,6 +268,7 @@ class appDevDebugProjectContainer extends Container
             'event_dispatcher' => 'debug.event_dispatcher',
             'mailer' => 'swiftmailer.mailer.default',
             'sensio.distribution.webconfigurator' => 'sensio_distribution.webconfigurator',
+            'session.handler' => 'session.handler.pdo',
             'session.storage' => 'session.storage.native',
             'swiftmailer.mailer' => 'swiftmailer.mailer.default',
             'swiftmailer.plugin.messagelogger' => 'swiftmailer.mailer.default.plugin.messagelogger',
@@ -646,7 +649,7 @@ class appDevDebugProjectContainer extends Container
         $b = new \Doctrine\DBAL\Configuration();
         $b->setSQLLogger($a);
 
-        return $this->services['doctrine.dbal.default_connection'] = $this->get('doctrine.dbal.connection_factory')->createConnection(array('driver' => 'pdo_mysql', 'host' => '127.0.0.1', 'port' => NULL, 'dbname' => 'symfony', 'user' => 'root', 'password' => 'sw12369...', 'charset' => 'UTF8', 'driverOptions' => array()), $b, new \Symfony\Bridge\Doctrine\ContainerAwareEventManager($this), array());
+        return $this->services['doctrine.dbal.default_connection'] = $this->get('doctrine.dbal.connection_factory')->createConnection(array('driver' => 'pdo_mysql', 'host' => '127.0.0.1', 'port' => 3306, 'dbname' => 'symfony', 'user' => 'root', 'password' => 'sw12369...', 'charset' => 'UTF8', 'driverOptions' => array()), $b, new \Symfony\Bridge\Doctrine\ContainerAwareEventManager($this), array());
     }
 
     /**
@@ -1761,6 +1764,23 @@ class appDevDebugProjectContainer extends Container
     }
 
     /**
+     * Gets the 'pdo' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \PDO A PDO instance.
+     */
+    protected function getPdoService()
+    {
+        $this->services['pdo'] = $instance = new \PDO('mysql:host=127.0.0.1;port=3306;dbname=symfony', 'root', 'sw12369...');
+
+        $instance->setAttribute(3, 2);
+
+        return $instance;
+    }
+
+    /**
      * Gets the 'profiler' service.
      *
      * This service is shared.
@@ -2262,6 +2282,19 @@ class appDevDebugProjectContainer extends Container
     }
 
     /**
+     * Gets the 'session.handler.pdo' service.
+     *
+     * This service is shared.
+     * This method always returns the same instance of the service.
+     *
+     * @return \Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler A Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler instance.
+     */
+    protected function getSession_Handler_PdoService()
+    {
+        return $this->services['session.handler.pdo'] = new \Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler($this->get('pdo'), array('db_table' => 'session', 'db_id_col' => 'session_id', 'db_data_col' => 'session_value', 'db_time_col' => 'session_time'));
+    }
+
+    /**
      * Gets the 'session.save_listener' service.
      *
      * This service is shared.
@@ -2297,7 +2330,7 @@ class appDevDebugProjectContainer extends Container
      */
     protected function getSession_Storage_NativeService()
     {
-        return $this->services['session.storage.native'] = new \Symfony\Component\HttpFoundation\Session\Storage\NativeSessionStorage(array('gc_probability' => 1), NULL, $this->get('session.storage.metadata_bag'));
+        return $this->services['session.storage.native'] = new \Symfony\Component\HttpFoundation\Session\Storage\NativeSessionStorage(array('name' => 'symfony2_blog', 'gc_probability' => 1), $this->get('session.handler.pdo'), $this->get('session.storage.metadata_bag'));
     }
 
     /**
@@ -2310,7 +2343,7 @@ class appDevDebugProjectContainer extends Container
      */
     protected function getSession_Storage_PhpBridgeService()
     {
-        return $this->services['session.storage.php_bridge'] = new \Symfony\Component\HttpFoundation\Session\Storage\PhpBridgeSessionStorage(NULL, $this->get('session.storage.metadata_bag'));
+        return $this->services['session.storage.php_bridge'] = new \Symfony\Component\HttpFoundation\Session\Storage\PhpBridgeSessionStorage($this->get('session.handler.pdo'), $this->get('session.storage.metadata_bag'));
     }
 
     /**
@@ -2349,7 +2382,7 @@ class appDevDebugProjectContainer extends Container
      */
     protected function getSwiftmailer_EmailSender_ListenerService()
     {
-        return $this->services['swiftmailer.email_sender.listener'] = new \Symfony\Bundle\SwiftmailerBundle\EventListener\EmailSenderListener($this);
+        return $this->services['swiftmailer.email_sender.listener'] = new \Symfony\Bundle\SwiftmailerBundle\EventListener\EmailSenderListener($this, $this->get('logger', ContainerInterface::NULL_ON_INVALID_REFERENCE));
     }
 
     /**
@@ -3144,7 +3177,7 @@ class appDevDebugProjectContainer extends Container
         $instance->addPath('/home/wwwroot/symfony2_blog/vendor/symfony/symfony/src/Symfony/Bundle/FrameworkBundle/Resources/views', 'Framework');
         $instance->addPath('/home/wwwroot/symfony2_blog/vendor/symfony/symfony/src/Symfony/Bundle/SecurityBundle/Resources/views', 'Security');
         $instance->addPath('/home/wwwroot/symfony2_blog/vendor/symfony/symfony/src/Symfony/Bundle/TwigBundle/Resources/views', 'Twig');
-        $instance->addPath('/home/wwwroot/symfony2_blog/vendor/symfony/swiftmailer-bundle/Symfony/Bundle/SwiftmailerBundle/Resources/views', 'Swiftmailer');
+        $instance->addPath('/home/wwwroot/symfony2_blog/vendor/symfony/swiftmailer-bundle/Resources/views', 'Swiftmailer');
         $instance->addPath('/home/wwwroot/symfony2_blog/vendor/doctrine/doctrine-bundle/Resources/views', 'Doctrine');
         $instance->addPath('/home/wwwroot/symfony2_blog/src/Blogger/BlogBundle/Resources/views', 'BloggerBlog');
         $instance->addPath('/home/wwwroot/symfony2_blog/src/Acme/DemoBundle/Resources/views', 'AcmeDemo');
@@ -3640,12 +3673,13 @@ class appDevDebugProjectContainer extends Container
                 'SensioDistributionBundle' => 'Sensio\\Bundle\\DistributionBundle\\SensioDistributionBundle',
                 'SensioGeneratorBundle' => 'Sensio\\Bundle\\GeneratorBundle\\SensioGeneratorBundle',
                 'DoctrineFixturesBundle' => 'Doctrine\\Bundle\\FixturesBundle\\DoctrineFixturesBundle',
+                'DoctrineMigrationsBundle' => 'Doctrine\\Bundle\\MigrationsBundle\\DoctrineMigrationsBundle',
             ),
             'kernel.charset' => 'UTF-8',
             'kernel.container_class' => 'appDevDebugProjectContainer',
             'database_driver' => 'pdo_mysql',
             'database_host' => '127.0.0.1',
-            'database_port' => NULL,
+            'database_port' => 3306,
             'database_name' => 'symfony',
             'database_user' => 'root',
             'database_password' => 'sw12369...',
@@ -3733,6 +3767,7 @@ class appDevDebugProjectContainer extends Container
             'session.handler.write_check.class' => 'Symfony\\Component\\HttpFoundation\\Session\\Storage\\Handler\\WriteCheckSessionHandler',
             'session_listener.class' => 'Symfony\\Bundle\\FrameworkBundle\\EventListener\\SessionListener',
             'session.storage.options' => array(
+                'name' => 'symfony2_blog',
                 'gc_probability' => 1,
             ),
             'session.save_path' => '/home/wwwroot/symfony2_blog/app/cache/dev/sessions',
@@ -4210,6 +4245,10 @@ class appDevDebugProjectContainer extends Container
             'sensio_distribution.webconfigurator.secret_step.class' => 'Sensio\\Bundle\\DistributionBundle\\Configurator\\Step\\SecretStep',
             'sensio_distribution.security_checker.class' => 'SensioLabs\\Security\\SecurityChecker',
             'sensio_distribution.security_checker.command.class' => 'SensioLabs\\Security\\Command\\SecurityCheckerCommand',
+            'doctrine_migrations.dir_name' => '/home/wwwroot/symfony2_blog/app/DoctrineMigrations',
+            'doctrine_migrations.namespace' => 'Application\\Migrations',
+            'doctrine_migrations.table_name' => 'migration_versions',
+            'doctrine_migrations.name' => 'Application Migrations',
             'data_collector.templates' => array(
                 'data_collector.config' => array(
                     0 => 'config',

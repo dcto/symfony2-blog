@@ -22,12 +22,13 @@
       <parameter key="SensioDistributionBundle">Sensio\Bundle\DistributionBundle\SensioDistributionBundle</parameter>
       <parameter key="SensioGeneratorBundle">Sensio\Bundle\GeneratorBundle\SensioGeneratorBundle</parameter>
       <parameter key="DoctrineFixturesBundle">Doctrine\Bundle\FixturesBundle\DoctrineFixturesBundle</parameter>
+      <parameter key="DoctrineMigrationsBundle">Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle</parameter>
     </parameter>
     <parameter key="kernel.charset">UTF-8</parameter>
     <parameter key="kernel.container_class">appDevDebugProjectContainer</parameter>
     <parameter key="database_driver">pdo_mysql</parameter>
     <parameter key="database_host">127.0.0.1</parameter>
-    <parameter key="database_port">null</parameter>
+    <parameter key="database_port">3306</parameter>
     <parameter key="database_name">symfony</parameter>
     <parameter key="database_user">root</parameter>
     <parameter key="database_password">sw12369...</parameter>
@@ -111,6 +112,7 @@
     <parameter key="session.handler.write_check.class">Symfony\Component\HttpFoundation\Session\Storage\Handler\WriteCheckSessionHandler</parameter>
     <parameter key="session_listener.class">Symfony\Bundle\FrameworkBundle\EventListener\SessionListener</parameter>
     <parameter key="session.storage.options" type="collection">
+      <parameter key="name">symfony2_blog</parameter>
       <parameter key="gc_probability">1</parameter>
     </parameter>
     <parameter key="session.save_path">/home/wwwroot/symfony2_blog/app/cache/dev/sessions</parameter>
@@ -574,6 +576,10 @@
     <parameter key="sensio_distribution.webconfigurator.secret_step.class">Sensio\Bundle\DistributionBundle\Configurator\Step\SecretStep</parameter>
     <parameter key="sensio_distribution.security_checker.class">SensioLabs\Security\SecurityChecker</parameter>
     <parameter key="sensio_distribution.security_checker.command.class">SensioLabs\Security\Command\SecurityCheckerCommand</parameter>
+    <parameter key="doctrine_migrations.dir_name">/home/wwwroot/symfony2_blog/app/DoctrineMigrations</parameter>
+    <parameter key="doctrine_migrations.namespace">Application\Migrations</parameter>
+    <parameter key="doctrine_migrations.table_name">migration_versions</parameter>
+    <parameter key="doctrine_migrations.name">Application Migrations</parameter>
     <parameter key="data_collector.templates" type="collection">
       <parameter key="data_collector.config" type="collection">
         <parameter>config</parameter>
@@ -629,6 +635,24 @@
     </parameter>
   </parameters>
   <services>
+    <service id="pdo" class="PDO">
+      <argument>mysql:host=127.0.0.1;port=3306;dbname=symfony</argument>
+      <argument>root</argument>
+      <argument>sw12369...</argument>
+      <call method="setAttribute">
+        <argument>3</argument>
+        <argument>2</argument>
+      </call>
+    </service>
+    <service id="session.handler.pdo" class="Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler">
+      <argument type="service" id="pdo"/>
+      <argument type="collection">
+        <argument key="db_table">session</argument>
+        <argument key="db_id_col">session_id</argument>
+        <argument key="db_data_col">session_value</argument>
+        <argument key="db_time_col">session_time</argument>
+      </argument>
+    </service>
     <service id="controller_name_converter" class="Symfony\Bundle\FrameworkBundle\Controller\ControllerNameParser" public="false">
       <tag name="monolog.logger" channel="request"/>
       <argument type="service" id="kernel"/>
@@ -1166,13 +1190,14 @@
     </service>
     <service id="session.storage.native" class="Symfony\Component\HttpFoundation\Session\Storage\NativeSessionStorage">
       <argument type="collection">
+        <argument key="name">symfony2_blog</argument>
         <argument key="gc_probability">1</argument>
       </argument>
-      <argument>null</argument>
+      <argument type="service" id="session.handler.pdo"/>
       <argument type="service" id="session.storage.metadata_bag"/>
     </service>
     <service id="session.storage.php_bridge" class="Symfony\Component\HttpFoundation\Session\Storage\PhpBridgeSessionStorage">
-      <argument>null</argument>
+      <argument type="service" id="session.handler.pdo"/>
       <argument type="service" id="session.storage.metadata_bag"/>
     </service>
     <service id="session_listener" class="Symfony\Bundle\FrameworkBundle\EventListener\SessionListener">
@@ -2260,6 +2285,7 @@
     <service id="swiftmailer.email_sender.listener" class="Symfony\Bundle\SwiftmailerBundle\EventListener\EmailSenderListener">
       <tag name="kernel.event_subscriber"/>
       <argument type="service" id="service_container"/>
+      <argument type="service" id="logger" on-invalid="null"/>
     </service>
     <service id="swiftmailer.mailer.default.transport.eventdispatcher" class="Swift_Events_SimpleEventDispatcher" public="false"/>
     <service id="swiftmailer.mailer.default" class="Swift_Mailer">
@@ -2363,7 +2389,7 @@
       <argument type="collection">
         <argument key="driver">pdo_mysql</argument>
         <argument key="host">127.0.0.1</argument>
-        <argument key="port">null</argument>
+        <argument key="port">3306</argument>
         <argument key="dbname">symfony</argument>
         <argument key="user">root</argument>
         <argument key="password">sw12369...</argument>
@@ -2891,7 +2917,7 @@
         <argument>Twig</argument>
       </call>
       <call method="addPath">
-        <argument>/home/wwwroot/symfony2_blog/vendor/symfony/swiftmailer-bundle/Symfony/Bundle/SwiftmailerBundle/Resources/views</argument>
+        <argument>/home/wwwroot/symfony2_blog/vendor/symfony/swiftmailer-bundle/Resources/views</argument>
         <argument>Swiftmailer</argument>
       </call>
       <call method="addPath">
@@ -2994,6 +3020,7 @@
     </service>
     <service id="event_dispatcher" alias="debug.event_dispatcher"/>
     <service id="session.storage" alias="session.storage.native"/>
+    <service id="session.handler" alias="session.handler.pdo"/>
     <service id="debug.templating.engine.twig" alias="templating"/>
     <service id="swiftmailer.spool" alias="swiftmailer.mailer.default.spool"/>
     <service id="swiftmailer.transport.real" alias="swiftmailer.mailer.default.transport.real"/>

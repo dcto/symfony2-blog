@@ -20,9 +20,26 @@ framework:
     trusted_proxies: ~
     session:
         # handler_id set to null will use default session handler from php.ini
-        handler_id:  ~
+        name: symfony2_blog
+        handler_id:  session.handler.pdo
     fragments:       ~
     http_method_override: true
+
+
+#service configureation
+services:
+    pdo:
+        class: PDO
+        arguments:
+            - "mysql:host=%database_host%;port=%database_port%;dbname=%database_name%"
+            - "%database_user%"
+            - "%database_password%"
+        calls:
+          - [setAttribute, [3, 2]]    # \PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION
+
+    session.handler.pdo:
+        class: Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler
+        arguments: ["@pdo", { db_table: session, db_id_col: session_id, db_data_col: session_value, db_time_col: session_time } ]
 
 # Twig Configuration
 twig:
