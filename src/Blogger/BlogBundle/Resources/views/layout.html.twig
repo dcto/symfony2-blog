@@ -1,0 +1,12 @@
+{# app/Resources/views/Blog/layout.html.twig #}
+{% extends "TwigBundle::layout.html.twig" %}
+
+{% block head %}
+<link href="{{ asset('bundles/bloggerblog/css/blog.css') }}" type="text/css" rel="stylesheet" />
+{% endblock %}
+{% block title 'Symfony Blog' %}
+{% block body %}
+    <h1>Blog Application</h1>
+
+    {% block content %}{% endblock %}
+{% endblock %}
